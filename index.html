@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paramount Wireless - Underwriting Decision Board</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter & Lucide Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SheetJS for Client-Side Excel Upload Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Hide spinner arrows for numeric input fields */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        /* Clean micro scrollbars */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f8fafc;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-[#fafafa] text-slate-900 min-h-screen flex flex-col antialiased">
+
+    <!-- Premium Clean Minimalist Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <div class="max-w-4xl mx-auto px-5 py-3 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+                <div class="p-2 bg-slate-100 rounded-lg border border-slate-200">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-slate-700"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm font-extrabold tracking-tight text-slate-900 flex items-center gap-1.5">
+                        PARAMOUNT WIRELESS
+                        <span class="text-[9px] bg-slate-100 text-slate-600 font-mono font-bold px-1.5 py-0.5 rounded border border-slate-200 uppercase tracking-wider">v6 Engine</span>
+                    </h1>
+                    <p class="text-[10px] text-slate-500 font-medium">Dealer Credit Tier Underwriting Board</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto border-t border-slate-150 sm:border-t-0 pt-2 sm:pt-0">
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium bg-slate-50 py-1 px-2.5 rounded-md border border-slate-200">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-400"></i>
+                    <span>Matrix: <strong class="text-slate-700 font-semibold">Marketplace_Limit_v6.pdf</strong></span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-5 space-y-4">
+        
+        <!-- Tab Selectors & Directory Database Linker -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div class="flex bg-slate-100 p-1 rounded-lg border border-slate-200 sm:max-w-xs w-full">
+                <button onclick="switchTab('single-tab')" id="btn-single-tab" class="tab-btn active flex-1 py-1.5 rounded-md text-xs font-bold text-center bg-white text-slate-900 shadow-xs transition duration-150">
+                    Single Dealer
+                </button>
+                <button onclick="switchTab('batch-tab')" id="btn-batch-tab" class="tab-btn flex-1 py-1.5 rounded-md text-xs font-semibold text-center text-slate-500 hover:text-slate-800 transition duration-150">
+                    Batch Paste
+                    <span id="batch-count-badge" class="bg-slate-200 text-slate-700 text-[9px] font-bold py-0.5 px-1.5 rounded-full ml-1">0</span>
+                </button>
+                <button onclick="switchTab('matrix-tab')" id="btn-matrix-tab" class="tab-btn flex-1 py-1.5 rounded-md text-xs font-semibold text-center text-slate-500 hover:text-slate-800 transition duration-150">
+                    Matrices
+                </button>
+            </div>
+            
+            <!-- Excel Sheet Database Upload Action -->
+            <div class="shrink-0">
+                <label class="cursor-pointer bg-white border border-slate-200 hover:bg-slate-50 px-3.5 py-1.5 rounded-lg shadow-xs flex items-center justify-center gap-2 text-xs font-bold text-slate-700 transition">
+                    <i data-lucide="upload" class="w-3.5 h-3.5 text-slate-500"></i>
+                    <span>Update TSP ID.xlsx Database</span>
+                    <input type="file" id="xlsx-directory-upload" accept=".xlsx, .xls" class="hidden" onchange="handleXlsxUpload(event)">
+                </label>
+            </div>
+        </div>
+
+        <!-- DATABASE REGISTRY STATE -->
+        <script>
+            // Prepopulated Directory fallback list (populated from TSP ID.xlsx - DLAR Export)
+            let PRELOADED_STORES = [
+                { tspId: "160242", name: "Dallas Tech Outlet", address: "3234 Greenmount Ave" },
+                { tspId: "163481", name: "Orlando Cellular Pro", address: "1814 Todds Ln" },
+                { tspId: "164678", name: "ARZ Enterprises LLC", address: "6139 Jefferson Ave" },
+                { tspId: "163140", name: "Jersey Shore Mobile", address: "337 Hospital Dr" },
+                { tspId: "167859", name: "Midwest Cellular LLC", address: "8 16th Ave" },
+                { tspId: "159386", name: "Cascade Wireless Hub", address: "1822 Pennsylvania Ave" },
+                { tspId: "159448", name: "Phoenix Wireless Depot", address: "2442 N Charles St" },
+                { tspId: "159664", name: "Star Wireless", address: "324 N Eutaw St" },
+                { tspId: "159835", name: "Substandard Corp", address: "3727 Eastern Ave" },
+                { tspId: "162192", name: "Monument Mobile", address: "2121 E Monument St" },
+                { tspId: "162193", name: "Frederick Ave Cells", address: "2421 Frederick Ave" },
+                { tspId: "163466", name: "Liberty Heights Wireless", address: "2401 Liberty Heights Ave" },
+                { tspId: "164947", name: "Broad St Comm", address: "2104 S Broad St" },
+                { tspId: "165213", name: "Market St Cellular", address: "724 N Market St" },
+                { tspId: "166654", name: "Allentown Rd Outlet", address: "7085 Allentown Rd" },
+                { tspId: "158799", name: "University Blvd Hub", address: "1500-a University Blvd" },
+                { tspId: "162756", name: "Willowdale Mobile", address: "5 Willowdale Dr" },
+                { tspId: "166058", name: "Chillum Rd Outlet", address: "2441 Chillum Rd" },
+                { tspId: "166106", name: "University East Cellular", address: "2504 University Blvd E" },
+                { tspId: "167338", name: "Silver Hill Comm", address: "5692 Silver Hill Rd" },
+                { tspId: "169257", name: "Eastern Blvd Wireless", address: "417a Eastern Blvd" },
+                { tspId: "169258", name: "Reisterstown Rd Outlet", address: "11700 Reisterstown Rd" },
+                { tspId: "158902", name: "East Point Mall Cells", address: "7791 East Point Mall" },
+                { tspId: "162867", name: "N 5th St Cellular", address: "2740 N 5th St" },
+                { tspId: "167093", name: "Point Breeze Comm", address: "1404 Point Breeze Ave" }
+            ];
+
+            // Master Program Tables derived from Paramount_Wireless_Marketplace_Limit_v6.pdf
+            const TIERS_LIMITS = {
+                base: {
+                    9: { base: 12500, psa100: 13750, psa150: 15000, psa200: 16250 },
+                    8: { base: 10000, psa100: 11000, psa150: 12000, psa200: 13000 },
+                    7: { base: 12500, psa100: 13750, psa150: 15000, psa200: 16250 },
+                    6: { base: 10000, psa100: 11000, psa150: 12000, psa200: 13000 },
+                    5: { base: 9000, psa100: 9900, psa150: 10800, psa200: 11700 },
+                    4: { base: 7000, psa100: 7700, psa150: 8400, psa200: 9100 },
+                    3: { base: 8000, psa100: 8800, psa150: 9600, psa200: 10400 },
+                    2: { base: 5000, psa100: 5500, psa150: 6000, psa200: 6500 },
+                    1: { base: 10000, psa100: 11000, psa150: 12000, psa200: 13000 },
+                    0: { base: 3000, psa100: 3300, psa150: 3600, psa200: 3900 }
+                },
+                increase: {
+                    9: { base: 14375, psa100: 15813, psa150: 17250, psa200: 18975 },
+                    8: { base: 11500, psa100: 12650, psa150: 13800, psa200: 15180 },
+                    7: { base: 15000, psa100: 16500, psa150: 18000, psa200: 19800 },
+                    6: { base: 12000, psa100: 13200, psa150: 14400, psa200: 15840 },
+                    5: { base: 11250, psa100: 12375, psa150: 13500, psa200: 14850 },
+                    4: { base: 8750, psa100: 9625, psa150: 10500, psa200: 11550 },
+                    3: { base: 10400, psa100: 11440, psa150: 12480, psa200: 13728 },
+                    2: { base: 6500, psa100: 7150, psa150: 7800, psa200: 8580 },
+                    1: { base: 12000, psa100: 13200, psa150: 14400, psa200: 15840 },
+                    0: { base: 4500, psa100: 4950, psa150: 5400, psa200: 5940 }
+                },
+                deduction: {
+                    9: { base: 8750, psa100: 9625, psa150: 10500, psa200: 11375 },
+                    8: { base: 7000, psa100: 7700, psa150: 8400, psa200: 9100 },
+                    7: { base: 8750, psa100: 9625, psa150: 10500, psa200: 11375 },
+                    6: { base: 7000, psa100: 7700, psa150: 8400, psa200: 9100 },
+                    5: { base: 6300, psa100: 6930, psa150: 7560, psa200: 8190 },
+                    4: { base: 4900, psa100: 5390, psa150: 5880, psa200: 6370 },
+                    3: { base: 5600, psa100: 6160, psa150: 6720, psa200: 7280 },
+                    2: { base: 3500, psa100: 3850, psa150: 4200, psa200: 4550 },
+                    1: { base: 10000, psa100: 11000, psa150: 12000, psa200: 13000 },
+                    0: { base: 2100, psa100: 2310, psa150: 2520, psa200: 2730 }
+                }
+            };
+
+            function determineLimit(tier, program, psaVal) {
+                const programData = TIERS_LIMITS[program] || TIERS_LIMITS.base;
+                const tierData = programData[tier];
+                if (!tierData) return 0;
+                
+                if (psaVal < 100) return tierData.base;
+                if (psaVal >= 100 && psaVal < 150) return tierData.psa100;
+                if (psaVal >= 150 && psaVal < 200) return tierData.psa150;
+                return tierData.psa200;
+            }
+
+            function evaluateStore(metrics) {
+                const { m4r, m3r, m2r, psa, isNewStore, program } = metrics;
+                
+                // Tier 1: New Stores Override
+                if (isNewStore) {
+                    const limit = determineLimit(1, program, psa);
+                    return {
+                        tier: 1,
+                        name: "Tier 1 - New Store Override",
+                        reason: "Policy Override: Classified as a New Store. Assigned introductory standard baseline limits.",
+                        limit: limit,
+                        tierDetails: "New Store Status Override applied"
+                    };
+                }
+
+                // Tier 0: Under 75% 2MR Safety lock
+                if (m2r < 75) {
+                    const limit = determineLimit(0, program, psa);
+                    return {
+                        tier: 0,
+                        name: "Tier 0 - Under 75% 2MR",
+                        reason: "Critical Action Limit: 2-Month Retention (2MR) falls below the mandatory 75% floor.",
+                        limit: limit,
+                        tierDetails: "2MR < 75% Lockout Triggered"
+                    };
+                }
+
+                // Tier 9 & 8: 4MR >= 75%
+                if (m4r >= 75) {
+                    if (psa >= 60) {
+                        const limit = determineLimit(9, program, psa);
+                        return {
+                            tier: 9,
+                            name: "Tier 9 — High Performance Elite",
+                            reason: "Maintains optimal historical quality (4MR >= 75%) backed by sustained volume (PSA >= 60).",
+                            limit: limit,
+                            tierDetails: "4MR >= 75% & PSA >= 60"
+                        };
+                    } else {
+                        const limit = determineLimit(8, program, psa);
+                        return {
+                            tier: 8,
+                            name: "Tier 8 - Solid Retention, Low Vol",
+                            reason: "Robust customer quality (4MR >= 75%), but monthly volume operates under the 60 PSA floor.",
+                            limit: limit,
+                            tierDetails: "4MR >= 75% & PSA < 60"
+                        };
+                    }
+                }
+
+                // Tier 7 & 6: 4MR between 70% and 75%
+                if (m4r >= 70 && m4r < 75) {
+                    if (psa >= 60) {
+                        const limit = determineLimit(7, program, psa);
+                        return {
+                            tier: 7,
+                            name: "Tier 7 - High Performance",
+                            reason: "Standard Retention: 4-Month Retention resides between 70% and 75% with stable volume (PSA >= 60).",
+                            limit: limit,
+                            tierDetails: "70% <= 4MR < 75% & PSA >= 60"
+                        };
+                    } else {
+                        const limit = determineLimit(6, program, psa);
+                        return {
+                            tier: 6,
+                            name: "Tier 6 - High Retention, Low Vol",
+                            reason: "Standard Quality (70% - 75%), but monthly volume falls under the 60 PSA threshold.",
+                            limit: limit,
+                            tierDetails: "70% <= 4MR < 75% & PSA < 60"
+                        };
+                    }
+                }
+
+                // Tier 5 & 4: 4MR between 60% and 65% (extending through 70% to resolve unmapped policy areas)
+                if (m4r >= 60 && m4r < 70) {
+                    const isGapMatch = m4r >= 65;
+                    const bracketName = isGapMatch ? "65%-70% Range" : "60%-65% Range";
+                    if (psa >= 60) {
+                        const limit = determineLimit(5, program, psa);
+                        return {
+                            tier: 5,
+                            name: "Tier 5 - Standard Performance",
+                            reason: `Baseline quality met: 4-Month Retention lies within ${bracketName}, with standard volume (PSA >= 60).`,
+                            limit: limit,
+                            tierDetails: `${m4r >= 65 ? "65%" : "60%"} <= 4MR < 70% & PSA >= 60`
+                        };
+                    } else {
+                        const limit = determineLimit(4, program, psa);
+                        return {
+                            tier: 4,
+                            name: "Tier 4 - Standard Retention, Low Vol",
+                            reason: `Baseline quality met: 4-Month Retention lies within ${bracketName}, but activations are under 60 PSA.`,
+                            limit: limit,
+                            tierDetails: `${m4r >= 65 ? "65%" : "60%"} <= 4MR < 70% & PSA < 60`
+                        };
+                    }
+                }
+
+                // Tier 3: 4MR < 50%, with high recent near-term trajectory indicators
+                if (m4r < 50 && m2r > 85 && m3r > 75) {
+                    const limit = determineLimit(3, program, psa);
+                    return {
+                        tier: 3,
+                        name: "Tier 3 - Positive Trajectory",
+                        reason: "Lagging 4MR (<50%), but shows a strong positive near-term trend (2MR > 85% and 3MR > 75%).",
+                        limit: limit,
+                        tierDetails: "4MR < 50% & 2MR > 85% & 3MR > 75%"
+                    };
+                }
+
+                // Tier 2: 4MR < 50%, fail near-term triggers
+                if (m4r < 50) {
+                    const limit = determineLimit(2, program, psa);
+                    return {
+                        tier: 2,
+                        name: "Tier 2 - Low Performance",
+                        reason: "Substandard Quality: 4-Month Retention is under 50% and fails near-term momentum checks.",
+                        limit: limit,
+                        tierDetails: "4MR < 50% & unstable near-term metrics"
+                    };
+                }
+
+                // Policy Gap Handling: 50% <= 4MR < 60%
+                if (m4r >= 50 && m4r < 60) {
+                    if (m2r > 85 && m3r > 75) {
+                        const limit = determineLimit(3, program, psa);
+                        return {
+                            tier: 3,
+                            name: "Tier 3 - Positive Trajectory (Gap Match)",
+                            reason: "4MR in 50%-60% gap. Safe evaluation: assigned Tier 3 due to positive near-term indicators.",
+                            limit: limit,
+                            tierDetails: "50% <= 4MR < 60% with good near-term indicators",
+                            isGap: true
+                        };
+                    } else {
+                        const limit = determineLimit(2, program, psa);
+                        return {
+                            tier: 2,
+                            name: "Tier 2 - Low Performance (Gap Match)",
+                            reason: "4MR in 50%-60% gap. Safe evaluation: assigned Tier 2 due to baseline near-term indicators.",
+                            limit: limit,
+                            tierDetails: "50% <= 4MR < 60% with standard indicators",
+                            isGap: true
+                        };
+                    }
+                }
+
+                // Absolute baseline fallback protection
+                const fallbackLimit = determineLimit(2, program, psa);
+                return {
+                    tier: 2,
+                    name: "Tier 2 - Baseline Security Fallback",
+                    reason: "Evaluation Guardrail: Evaluated parameters fell outside standard ranges. Assessed defensively.",
+                    limit: fallbackLimit,
+                    tierDetails: "Standard safeguard thresholds enforced"
+                };
+            }
+        </script>
+
+        <!-- TAB 1: SINGLE DEALER BOARD -->
+        <div id="single-tab" class="tab-pane">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                
+                <!-- Left Input Panel -->
+                <div class="md:col-span-6 bg-white rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.05)] overflow-hidden">
+                    <div class="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="sliders" class="w-4 h-4 text-slate-500"></i>
+                            <span class="font-bold text-xs uppercase tracking-wider text-slate-700">Audit Parameters</span>
+                        </div>
+                        <span id="directory-source-badge" class="text-[10px] text-slate-550 bg-slate-200 px-2.5 py-0.5 rounded font-mono font-semibold">TSP ID.xlsx (Default)</span>
+                    </div>
+                    
+                    <form id="single-evaluator-form" class="p-5 space-y-4" onsubmit="return false;" oninput="runSingleEvaluation()">
+                        
+                        <!-- Directory Lookup Dropdown (Optimized to display Address Only) -->
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-500 tracking-wider mb-1.5 flex items-center gap-1.5">
+                                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400"></i>
+                                Select Registry Address
+                            </label>
+                            <select id="store-preloaded-select" onchange="handlePreloadedSelect()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-800 text-xs font-semibold focus:border-slate-800 focus:outline-none transition h-10 truncate">
+                                <option value="custom">-- Custom / Manual Entry --</option>
+                            </select>
+                        </div>
+
+                        <div class="border-t border-slate-200/85 my-1"></div>
+
+                        <!-- TSP ID & Dealer Inputs -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-500 tracking-wider mb-1.5">
+                                    TSP ID
+                                </label>
+                                <input type="text" id="store-tsp-id" value="164678" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 focus:border-slate-800 focus:outline-none text-xs font-mono font-semibold h-10">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-500 tracking-wider mb-1.5">
+                                    Dealer
+                                </label>
+                                <input type="text" id="store-desc-name" value="ARZ Enterprises LLC" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 focus:border-slate-800 focus:outline-none text-xs font-semibold h-10">
+                            </div>
+                        </div>
+
+                        <!-- Store Physical Address -->
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-500 tracking-wider mb-1.5">
+                                Physical Address
+                            </label>
+                            <input type="text" id="store-address" value="6139 Jefferson Ave" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 focus:border-slate-800 focus:outline-none text-xs font-semibold text-slate-600 h-10" placeholder="Enter physical address">
+                        </div>
+
+                        <div class="border-t border-slate-200/85 my-1"></div>
+
+                        <!-- Underwriting Policy Choice -->
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-500 tracking-wider mb-1.5">Underwriting Policy Path</label>
+                            <select id="store-program" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 focus:border-slate-800 focus:outline-none text-xs font-bold text-slate-850 h-10 transition">
+                                <option value="base">Base Tiers Table</option>
+                                <option value="increase" selected>Edge Performance Increase</option>
+                                <option value="deduction">Edge Performance Deduction</option>
+                            </select>
+                        </div>
+
+                        <!-- Current Limit & Monthly PSA Volume -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-500 tracking-wider mb-1.5">Current Limit ($)</label>
+                                <div class="relative">
+                                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">$</span>
+                                    <input type="number" id="store-current-limit" value="10000" min="0" step="100" class="w-full bg-white border border-slate-300 rounded-lg pl-7 pr-3 py-2 focus:border-slate-800 focus:outline-none text-xs font-bold h-10">
+                                </div>
+                            </div>
+                            
+                            <!-- Monthly PSA Volume Controls -->
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-500 tracking-wider mb-1.5">Monthly PSA Volume</label>
+                                <div class="flex gap-1.5">
+                                    <button type="button" onclick="adjustPsa(-10)" class="w-9 h-10 border border-slate-300 hover:bg-slate-50 rounded-lg flex items-center justify-center font-bold text-slate-600 text-sm shrink-0" title="Decrease PSA by 10">-</button>
+                                    <input type="number" id="store-psa" value="130" min="0" step="1" class="w-full text-center bg-white border border-slate-300 rounded-lg px-2 py-2 focus:border-slate-800 focus:outline-none text-xs font-bold h-10">
+                                    <button type="button" onclick="adjustPsa(10)" class="w-9 h-10 border border-slate-300 hover:bg-slate-50 rounded-lg flex items-center justify-center font-bold text-slate-600 text-sm shrink-0" title="Increase PSA by 10">+</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PSA Target Benchmarks -->
+                        <div class="space-y-1">
+                            <span class="block text-[9px] font-bold uppercase text-slate-400 tracking-wider">Fast PSA Columns:</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button type="button" onclick="setPsaValue(45)" class="px-2 py-1 text-[10px] font-semibold bg-slate-100 border border-slate-200 rounded hover:bg-slate-200 transition font-mono"><60</button>
+                                <button type="button" onclick="setPsaValue(65)" class="px-2 py-1 text-[10px] font-semibold bg-slate-100 border border-slate-200 rounded hover:bg-slate-200 transition font-mono">>=60</button>
+                                <button type="button" onclick="setPsaValue(100)" class="px-2 py-1 text-[10px] font-semibold bg-slate-100 border border-slate-200 rounded hover:bg-slate-200 transition font-mono">100</button>
+                                <button type="button" onclick="setPsaValue(150)" class="px-2 py-1 text-[10px] font-semibold bg-slate-100 border border-slate-200 rounded hover:bg-slate-200 transition font-mono">150</button>
+                                <button type="button" onclick="setPsaValue(200)" class="px-2 py-1 text-[10px] font-semibold bg-slate-100 border border-slate-200 rounded hover:bg-slate-200 transition font-mono">200+</button>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-200/85 my-1"></div>
+
+                        <!-- Touch-First Retention Metrics Grid -->
+                        <div class="space-y-2.5">
+                            <span class="block text-xs font-bold uppercase text-slate-700 tracking-wider">Retention Performance (%)</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                
+                                <!-- 4MR Field -->
+                                <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1.5">
+                                    <span class="block text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">4-Month (4MR)</span>
+                                    <div class="relative">
+                                        <input type="number" id="store-m4r-input" min="0" max="100" value="82" class="w-full text-center font-bold text-slate-800 bg-white border border-slate-300 focus:border-slate-800 rounded-lg py-1.5 px-1 focus:outline-none text-xs h-9 transition">
+                                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">%</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-1">
+                                        <button type="button" onclick="setMetric('m4r', 75)" class="py-0.5 text-[9px] font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 transition">75%</button>
+                                        <button type="button" onclick="setMetric('m4r', 70)" class="py-0.5 text-[9px] font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 transition">70%</button>
+                                        <button type="button" onclick="setMetric('m4r', 60)" class="py-0.5 text-[9px] font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 transition">60%</button>
+                                    </div>
+                                </div>
+
+                                <!-- 3MR Field -->
+                                <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1.5">
+                                    <span class="block text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">3-Month (3MR)</span>
+                                    <div class="relative">
+                                        <input type="number" id="store-m3r-input" min="0" max="100" value="80" class="w-full text-center font-bold text-slate-800 bg-white border border-slate-300 focus:border-slate-800 rounded-lg py-1.5 px-1 focus:outline-none text-xs h-9 transition">
+                                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">%</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-1">
+                                        <button type="button" onclick="setMetric('m3r', 100)" class="py-0.5 text-[9px] font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 transition">100%</button>
+                                        <button type="button" onclick="setMetric('m3r', 80)" class="py-0.5 text-[9px] font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 transition">80%</button>
+                                        <button type="button" onclick="setMetric('m3r', 76)" class="py-0.5 text-[9px] font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 transition">>75%</button>
+                                    </div>
+                                </div>
+
+                                <!-- 2MR Field -->
+                                <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1.5">
+                                    <span class="block text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">2-Month (2MR)</span>
+                                    <div class="relative">
+                                        <input type="number" id="store-m2r-input" min="0" max="100" value="91" class="w-full text-center font-bold text-slate-800 bg-white border border-slate-300 focus:border-slate-800 rounded-lg py-1.5 px-1 focus:outline-none text-xs h-9 transition">
+                                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-[10px] pointer-events-none">%</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-1">
+                                        <button type="button" onclick="setMetric('m2r', 100)" class="py-0.5 text-[9px] font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 transition">100%</button>
+                                        <button type="button" onclick="setMetric('m2r', 86)" class="py-0.5 text-[9px] font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 transition">>85%</button>
+                                        <button type="button" onclick="setMetric('m2r', 74)" class="py-0.5 text-[9px] font-bold bg-rose-50 border border-rose-200 text-rose-700 rounded hover:bg-rose-500 hover:text-white transition"><75%</button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- New Store Status Toggle Override -->
+                        <div class="pt-2 flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-200 cursor-pointer" onclick="toggleNewStoreCheckbox()">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="info" class="w-4 h-4 text-slate-500"></i>
+                                <span class="text-xs font-semibold text-slate-700">Flag as New Dealer Registration</span>
+                            </div>
+                            <label class="relative flex items-center cursor-pointer pointer-events-none">
+                                <input type="checkbox" id="store-is-new" class="sr-only peer" onchange="runSingleEvaluation()">
+                                <div class="w-9 h-5 bg-slate-300 rounded-full peer peer-focus:outline-none peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-slate-900"></div>
+                            </label>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Right Output Panel -->
+                <div class="md:col-span-6 flex flex-col gap-4">
+                    
+                    <!-- Primary Evaluation Outcome Card -->
+                    <div class="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-slate-200 p-5 relative overflow-hidden flex-grow flex flex-col justify-between">
+                        <!-- Tiny visual left-bar border -->
+                        <div id="outcome-accent-bar" class="absolute left-0 top-0 bottom-0 w-1 bg-slate-400"></div>
+                        
+                        <div class="pl-2 space-y-4">
+                            <!-- Title Block -->
+                            <div class="flex justify-between items-start gap-3">
+                                <div>
+                                    <span class="text-[9px] uppercase tracking-widest font-bold text-slate-400 block">Assessment Outcome</span>
+                                    <h3 id="outcome-tier-name" class="text-base font-extrabold text-slate-900 leading-tight mt-0.5">Tier 9 — High Performance Elite</h3>
+                                    <p id="outcome-tier-reason" class="text-xs text-slate-550 leading-relaxed mt-2 font-medium">Underwriting evaluation analysis holds current parameters successfully.</p>
+                                </div>
+                                <div id="outcome-badge-container" class="shrink-0">
+                                    <div id="outcome-badge" class="text-lg font-bold px-3 py-1 bg-slate-100 text-slate-800 border border-slate-200 rounded-lg flex items-baseline gap-1">
+                                        <span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 mr-0.5">Tier</span>
+                                        <span>9</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Geographic Pin tracker -->
+                            <div class="py-1.5 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600 flex items-center gap-2">
+                                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                                <span class="truncate font-medium text-slate-600 text-[11px]" id="outcome-active-address">Address: 6139 Jefferson Ave</span>
+                            </div>
+
+                            <!-- Underwriting Metrics Matrix Block -->
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-b border-slate-100 py-3.5 my-1">
+                                <div class="bg-slate-50 rounded-lg p-2 border border-slate-200 text-center">
+                                    <span class="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">Current Limit</span>
+                                    <div class="text-sm font-extrabold text-slate-600 mt-0.5" id="outcome-current-limit-val">$10,000</div>
+                                </div>
+                                <div class="bg-slate-50 rounded-lg p-2 border-2 border-slate-900/10 text-center">
+                                    <span class="text-[9px] uppercase font-bold text-slate-700 block tracking-wider">Policy Target</span>
+                                    <div class="text-sm font-black text-slate-900 mt-0.5" id="outcome-recommended-limit">$15,813</div>
+                                </div>
+                                <div id="outcome-diff-card" class="rounded-lg p-2 border text-center flex flex-col justify-center">
+                                    <span class="text-[9px] uppercase font-bold tracking-wider block" id="outcome-diff-label">Variance Margin</span>
+                                    <div class="text-sm font-black mt-0.5" id="outcome-diff-value">+$5,813</div>
+                                </div>
+                            </div>
+
+                            <!-- Gap warnings dynamic block -->
+                            <div id="gap-warning-banner" class="hidden bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 flex gap-2.5 items-start">
+                                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                                <div>
+                                    <h4 class="text-xs font-bold">Unmapped Policy Range Flagged</h4>
+                                    <p class="text-[11px] text-amber-700 leading-normal mt-0.5">Dealer parameters fall within the 50%-60% 4MR gap. Calculated safe assignments applied.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action copies -->
+                        <div class="mt-4 pt-4 border-t border-slate-100 pl-2">
+                            <button type="button" onclick="copySingleAssessmentText()" class="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white rounded-lg text-xs font-bold shadow-xs transition w-full h-10">
+                                <i data-lucide="copy" class="w-4 h-4 shrink-0"></i>
+                                <span>Copy Clean Audit Narrative</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Underwriting Action Plan (Dynamic Optimizer Roadmap) -->
+                    <div class="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-slate-200 p-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="p-1.5 bg-slate-100 text-slate-700 rounded-md"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i></span>
+                                <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider">Strategic Roadmap Requirements</h4>
+                            </div>
+                            <span class="text-[9px] font-mono text-slate-400 font-bold">Parameters</span>
+                        </div>
+                        <div class="space-y-2" id="optimizer-checklist-container">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: BATCH & PASTE PROCESSOR -->
+        <div id="batch-tab" class="tab-pane hidden">
+            <div class="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-slate-200 overflow-hidden mb-4">
+                <div class="bg-slate-50 border-b border-slate-200 px-5 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <span class="font-bold tracking-wider uppercase text-xs text-slate-700 block">Bulk Evaluator Registry</span>
+                        <span class="text-[11px] text-slate-500 font-medium">Batch process credit reviews using copy/pasted tabular data.</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="loadSampleBatchData()" class="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 flex items-center gap-1.5 transition shadow-xs">
+                            <i data-lucide="play-circle" class="w-3.5 h-3.5 text-emerald-600"></i> Load Sample Rows
+                        </button>
+                        <button onclick="clearBatch()" class="px-3 py-1.5 bg-white hover:bg-slate-50 text-rose-600 text-xs font-semibold rounded-lg border border-slate-200 flex items-center gap-1.5 transition shadow-xs">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-500"></i> Clear All
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-5 space-y-4">
+                    <div>
+                        <textarea id="batch-paste-box" placeholder="Example format (Copy/Paste columns directly from Excel):&#10;Dealer&#9;Current Limit&#9;Program&#9;4MR&#9;3MR&#9;2MR&#9;PSA&#9;IsNewStore&#10;Dallas Tech Outlet&#9;10000&#9;increase&#9;82&#9;80&#9;91&#9;130&#9;false&#10;Orlando Cellular Pro&#9;6000&#9;deduction&#9;45&#9;70&#9;68&#9;40&#9;false" rows="5" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 font-mono text-[11px] focus:ring-1 focus:ring-slate-450 focus:border-slate-800 focus:outline-none focus:bg-white transition"></textarea>
+                        
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mt-4">
+                            <div class="text-[10px] text-slate-500 leading-normal max-w-xl">
+                                <span class="font-bold text-slate-700 block mb-0.5">Required Table Grid Column Sequence:</span>
+                                <code>Dealer Name</code> • <code>Current Limit ($)</code> • <code>Program Framework (base/increase/deduction)</code> • <code>4MR%</code> • <code>3MR%</code> • <code>2MR%</code> • <code>PSA Volume</code> • <code>New Store Flag (true/false)</code>
+                            </div>
+                            <button onclick="parseAndProcessBatch()" class="w-full md:w-auto px-5 py-2.5 bg-slate-950 hover:bg-slate-800 text-white font-bold rounded-lg flex items-center justify-center gap-2 shadow-xs transition text-xs h-10 shrink-0">
+                                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                                Parse & Run Batch
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch Statistics Panel -->
+            <div id="batch-stats-section" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4">
+                    <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">Aggregate Limit Variance</span>
+                    <div class="text-lg font-black text-slate-900 mt-1" id="stat-approved-sum">+$0</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4">
+                    <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">Processed Accounts</span>
+                    <div class="text-lg font-black text-slate-800 mt-1" id="stat-processed-count">0</div>
+                </div>
+                <div class="bg-white rounded-xl shadow-xs border border-slate-200 p-4 space-y-1.5">
+                    <span class="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">Variance Distribution</span>
+                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden flex">
+                        <div id="bar-pct-increase" class="bg-emerald-500 h-full" style="width: 0%"></div>
+                        <div id="bar-pct-hold" class="bg-slate-300 h-full" style="width: 0%"></div>
+                        <div id="bar-pct-reduction" class="bg-rose-400 h-full" style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between text-[9px] text-slate-450 font-semibold">
+                        <span id="stat-pct-increase" class="text-emerald-700">0% Increase</span>
+                        <span>Holds/Cuts</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch Results Table -->
+            <div id="batch-results-wrapper" class="hidden bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 flex justify-between items-center">
+                    <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Processed Dealer Ledger</h4>
+                    <button onclick="exportBatchCSV()" class="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 bg-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition">
+                        <i data-lucide="download" class="w-3.5 h-3.5 text-slate-550"></i> Export CSV
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-400 uppercase font-bold border-b border-slate-200 text-[9px] tracking-wider">
+                                <th class="px-4 py-3">Dealer</th>
+                                <th class="px-4 py-3">Metrics (4MR/3MR/2MR)</th>
+                                <th class="px-4 py-3">Monthly PSA</th>
+                                <th class="px-4 py-3">Tier Assigned</th>
+                                <th class="px-4 py-3">Current Limit</th>
+                                <th class="px-4 py-3">Target Limit</th>
+                                <th class="px-4 py-3">Variance Margin</th>
+                                <th class="px-4 py-3 text-right">Strategic System Rationale</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batch-results-tbody" class="divide-y divide-slate-100 font-semibold text-slate-700 text-[11px]">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: UNDERWRITING MATRICES REFERENCE -->
+        <div id="matrix-tab" class="tab-pane hidden space-y-4">
+            
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider">v6 Corporate Reference Limit Matrix Directory</h3>
+                    <p class="text-[11px] text-slate-500 font-medium">Mapped parameters retrieved from pages 1 and 2 of <span class="font-mono text-slate-700 font-semibold">Paramount_Wireless_Marketplace_Limit_v6.pdf</span>.</p>
+                </div>
+                <div class="flex bg-slate-100 p-1 rounded-lg border border-slate-250 shrink-0">
+                    <button onclick="switchMatrixView('ref-base')" id="btn-ref-base" class="ref-btn active px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-800 transition shadow-xs">Base Tiers Table</button>
+                    <button onclick="switchMatrixView('ref-increase')" id="btn-ref-increase" class="ref-btn px-3 py-1.5 rounded-md text-xs font-semibold text-slate-500 hover:text-slate-800 transition">Edge Increase</button>
+                    <button onclick="switchMatrixView('ref-deduction')" id="btn-ref-deduction" class="ref-btn px-3 py-1.5 rounded-md text-xs font-semibold text-slate-500 hover:text-slate-800 transition">Edge Penalty</button>
+                </div>
+            </div>
+
+            <!-- Table Block -->
+            <div class="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-550 text-slate-900 border-b border-slate-200 font-bold uppercase tracking-wider text-[9px] bg-slate-50">
+                                <th class="px-4 py-3">Matched Tier</th>
+                                <th class="px-4 py-3">Rule Specifications (4MR Retention & PSA Volume)</th>
+                                <th class="px-4 py-3">Base Limit</th>
+                                <th class="px-4 py-3">100 PSA Limit</th>
+                                <th class="px-4 py-3">150 PSA Limit</th>
+                                <th class="px-4 py-3">200+ PSA Limit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrix-view-tbody" class="divide-y divide-slate-150 font-semibold text-slate-700 text-xs">
+                            <!-- Injected dynamically based on program sub-tab -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Detailed Explanatory Policy Footnotes -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs text-slate-600 leading-relaxed space-y-1.5">
+                <span class="font-bold text-slate-800 block uppercase tracking-wider text-[10px]">Underwriting Operations Matrix Safeguards:</span>
+                <ul class="list-disc list-inside space-y-1 text-slate-650 font-medium text-[11px]">
+                    <li><strong>Tier 0 Safety Lockout:</strong> Any dealer falling below a <strong>75% 2-Month Retention (2MR)</strong> benchmark automatically forfeits standard eligibility and falls into Tier 0, restricting maximum allowances.</li>
+                    <li><strong>New Store Ramp-up Protocol (Tier 1):</strong> Disregards early operational retention history to establish consistent introductory baseline parameters.</li>
+                    <li><strong>Tactical Evaluation Window (50%-60% 4MR):</strong> Resolves unmapped areas dynamically by assessing high-momentum trends (2MR > 85% / 3MR > 75%) for defensive tier alignment.</li>
+                </ul>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- CORE WORKSPACE OPERATIONS -->
+    <script>
+        // Adjust PSA value safely
+        function adjustPsa(amount) {
+            const input = document.getElementById("store-psa");
+            let val = parseFloat(input.value) || 0;
+            val = Math.max(0, val + amount);
+            input.value = val;
+            runSingleEvaluation();
+        }
+
+        // Fast setting PSA columns from presets
+        function setPsaValue(val) {
+            document.getElementById("store-psa").value = val;
+            runSingleEvaluation();
+        }
+
+        // Fast setting retention targets from presets
+        function setMetric(id, value) {
+            document.getElementById(`store-${id}-input`).value = value;
+            runSingleEvaluation();
+        }
+
+        // Safe toggle utility for status override
+        function toggleNewStoreCheckbox() {
+            const checkbox = document.getElementById("store-is-new");
+            checkbox.checked = !checkbox.checked;
+            runSingleEvaluation();
+        }
+
+        function runSingleEvaluation() {
+            const tspId = document.getElementById("store-tsp-id").value || "164678";
+            const storeDescName = document.getElementById("store-desc-name").value || "Custom Store";
+            const address = document.getElementById("store-address").value || "No address listed";
+            const program = document.getElementById("store-program").value;
+            const currentLimit = parseFloat(document.getElementById("store-current-limit").value) || 0;
+            const psa = parseFloat(document.getElementById("store-psa").value) || 0;
+            
+            // Collect metric percentages safely
+            const m4r = Math.max(0, Math.min(100, parseFloat(document.getElementById("store-m4r-input").value) || 0));
+            const m3r = Math.max(0, Math.min(100, parseFloat(document.getElementById("store-m3r-input").value) || 0));
+            const m2r = Math.max(0, Math.min(100, parseFloat(document.getElementById("store-m2r-input").value) || 0));
+            
+            const isNewStore = document.getElementById("store-is-new").checked;
+
+            // Trigger mapping computation
+            const result = evaluateStore({ m4r, m3r, m2r, psa, isNewStore, program });
+
+            const badgeEl = document.getElementById("outcome-badge");
+            const diffCard = document.getElementById("outcome-diff-card");
+            const accentBar = document.getElementById("outcome-accent-bar");
+
+            // Update user outputs
+            document.getElementById("outcome-tier-name").innerText = result.name;
+            document.getElementById("outcome-tier-reason").innerText = result.reason;
+            document.getElementById("outcome-active-address").innerText = "Address: " + address;
+            
+            badgeEl.innerHTML = `<span class="text-[9px] font-bold uppercase tracking-wider text-slate-400 mr-0.5">Tier</span><span>${result.tier}</span>`;
+            
+            document.getElementById("outcome-current-limit-val").innerText = `$${currentLimit.toLocaleString()}`;
+            document.getElementById("outcome-recommended-limit").innerText = `$${result.limit.toLocaleString()}`;
+
+            const diff = result.limit - currentLimit;
+            const diffValueEl = document.getElementById("outcome-diff-value");
+            const diffLabelEl = document.getElementById("outcome-diff-label");
+
+            // Apply minimalist status styling based on variance outcome
+            if (diff > 0) {
+                // Limit Increase (Quiet Green)
+                diffValueEl.className = "text-sm font-black text-emerald-700 mt-1";
+                diffValueEl.innerText = `+$${diff.toLocaleString()}`;
+                diffLabelEl.innerText = "Increase Margin";
+                diffLabelEl.className = "text-[9px] uppercase font-bold text-emerald-600 tracking-wider block";
+                
+                diffCard.className = "rounded-lg p-2.5 border border-emerald-250 bg-emerald-50 text-center flex flex-col justify-center shadow-xs";
+                badgeEl.className = "text-base font-extrabold px-3 py-1 bg-emerald-50 text-emerald-850 border border-emerald-200 rounded-lg flex items-baseline gap-1";
+                accentBar.className = "absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500";
+            } else if (diff === 0) {
+                // No variance (Neutral Slate)
+                diffValueEl.className = "text-sm font-black text-slate-600 mt-1";
+                diffValueEl.innerText = `$${diff.toLocaleString()}`;
+                diffLabelEl.innerText = "Variance Held";
+                diffLabelEl.className = "text-[9px] uppercase font-bold text-slate-500 tracking-wider block";
+
+                diffCard.className = "rounded-lg p-2.5 border border-slate-200 bg-slate-50 text-center flex flex-col justify-center shadow-xs";
+                badgeEl.className = "text-base font-extrabold px-3 py-1 bg-slate-100 text-slate-800 border border-slate-200 rounded-lg flex items-baseline gap-1";
+                accentBar.className = "absolute left-0 top-0 bottom-0 w-1.5 bg-slate-400";
+            } else {
+                // Reduction Penalty (Quiet Crimson)
+                diffValueEl.className = "text-sm font-black text-rose-700 mt-1";
+                diffValueEl.innerText = `-$${Math.abs(diff).toLocaleString()}`;
+                diffLabelEl.innerText = "Reduction Applied";
+                diffLabelEl.className = "text-[9px] uppercase font-bold text-rose-600 tracking-wider block";
+
+                diffCard.className = "rounded-lg p-2.5 border border-rose-200 bg-rose-50 text-center flex flex-col justify-center shadow-xs";
+                badgeEl.className = "text-base font-extrabold px-3 py-1 bg-rose-50 text-rose-850 border border-rose-200 rounded-lg flex items-baseline gap-1";
+                accentBar.className = "absolute left-0 top-0 bottom-0 w-1.5 bg-rose-500";
+            }
+
+            const warningBanner = document.getElementById("gap-warning-banner");
+            if (result.isGap) {
+                warningBanner.classList.remove("hidden");
+            } else {
+                warningBanner.classList.add("hidden");
+            }
+
+            // Build dynamic next steps list
+            buildOptimizerChecklist({ m4r, m3r, m2r, psa, isNewStore, program, currentTier: result.tier, currentLimit: result.limit });
+        }
+
+        // Local storage and memory synchronizer
+        function initPreloadedSelect() {
+            const savedDirectory = localStorage.getItem('PARAMOUNT_TSP_DIRECTORY');
+            const savedFilename = localStorage.getItem('PARAMOUNT_TSP_FILENAME');
+            
+            if (savedDirectory) {
+                try {
+                    PRELOADED_STORES = JSON.parse(savedDirectory);
+                    const sourceBadge = document.getElementById("directory-source-badge");
+                    if (sourceBadge) {
+                        sourceBadge.innerHTML = `<span class="text-slate-800 font-bold flex items-center gap-1">🟢 Database Synced: ${savedFilename || 'TSP ID.xlsx'}</span>`;
+                    }
+                } catch (e) {
+                    console.error("Local database restore failure.", e);
+                }
+            }
+            
+            refreshPreloadedDropdown();
+        }
+
+        function refreshPreloadedDropdown() {
+            const selectEl = document.getElementById("store-preloaded-select");
+            if (!selectEl) return;
+            
+            selectEl.innerHTML = '<option value="custom">-- Custom / Manual Entry --</option>';
+            
+            PRELOADED_STORES.forEach((store) => {
+                const opt = document.createElement("option");
+                opt.value = store.tspId;
+                // Listing ONLY the physical address for mobile and narrow-screen scannability
+                opt.innerText = store.address || `${store.tspId} - ${store.name}`;
+                selectEl.appendChild(opt);
+            });
+            
+            // Set starting selection
+            if (PRELOADED_STORES.length > 0) {
+                const arzStore = PRELOADED_STORES.find(s => s.tspId === "164678");
+                if (arzStore) {
+                    selectEl.value = "164678";
+                } else {
+                    selectEl.value = PRELOADED_STORES[0].tspId;
+                }
+                handlePreloadedSelect();
+            }
+        }
+
+        // Dynamic excel import handling
+        function handleXlsxUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+
+                    if (json.length === 0) {
+                        showToast("Sheet contains no processable columns.", "error");
+                        return;
+                    }
+
+                    const parsedStores = [];
+                    json.forEach(row => {
+                        let tspId = '';
+                        let name = '';
+                        let address = '';
+
+                        Object.keys(row).forEach(key => {
+                            const normalizedKey = key.trim().toLowerCase().replace(/[\s_-]+/g, '');
+                            if (normalizedKey === 'tspid' || normalizedKey === 'tsp' || normalizedKey === 'storeid') {
+                                tspId = row[key];
+                            } else if (normalizedKey === 'name' || normalizedKey === 'storename' || normalizedKey === 'dealer' || normalizedKey === 'dealername') {
+                                name = row[key];
+                            } else if (normalizedKey === 'address' || normalizedKey === 'storeaddress' || normalizedKey === 'physicaladdress' || normalizedKey === 'location') {
+                                address = row[key];
+                            }
+                        });
+
+                        if (tspId) {
+                            parsedStores.push({
+                                tspId: String(tspId).trim(),
+                                name: name ? String(name).trim() : `Dealer ${tspId}`,
+                                address: address ? String(address).trim() : 'No physical address found in sheet'
+                            });
+                        }
+                    });
+
+                    if (parsedStores.length > 0) {
+                        localStorage.setItem('PARAMOUNT_TSP_DIRECTORY', JSON.stringify(parsedStores));
+                        localStorage.setItem('PARAMOUNT_TSP_FILENAME', file.name);
+
+                        PRELOADED_STORES = parsedStores;
+
+                        const sourceBadge = document.getElementById("directory-source-badge");
+                        if (sourceBadge) {
+                            sourceBadge.innerHTML = `<span class="text-slate-800 font-bold flex items-center gap-1">🟢 Database Synced: ${file.name}</span>`;
+                        }
+                        
+                        refreshPreloadedDropdown();
+                        showToast(`Successfully synced local file! Loaded ${parsedStores.length} dealers.`, "success");
+                    } else {
+                        showToast("Columns matching 'TSP ID', 'Name', or 'Address' were not detected.", "error");
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showToast("Failed to process Excel document formats.", "error");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function handlePreloadedSelect() {
+            const selectVal = document.getElementById("store-preloaded-select").value;
+            
+            if (selectVal === "custom") {
+                document.getElementById("store-tsp-id").value = "";
+                document.getElementById("store-desc-name").value = "";
+                document.getElementById("store-address").value = "";
+            } else {
+                const store = PRELOADED_STORES.find(s => s.tspId === selectVal);
+                if (store) {
+                    document.getElementById("store-tsp-id").value = store.tspId;
+                    document.getElementById("store-desc-name").value = store.name;
+                    document.getElementById("store-address").value = store.address;
+                }
+            }
+            runSingleEvaluation();
+        }
+
+        // Custom Checklist Generator for Requirements
+        function buildOptimizerChecklist(dealer) {
+            const container = document.getElementById("optimizer-checklist-container");
+            container.innerHTML = "";
+
+            const { m4r, m3r, m2r, psa, isNewStore, program, currentTier, currentLimit } = dealer;
+
+            if (isNewStore) {
+                container.innerHTML = `
+                    <div class="flex items-start gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <i data-lucide="info" class="w-4 h-4 text-slate-500 shrink-0 mt-0.5"></i>
+                        <div>
+                            <strong class="text-slate-800 block text-xs font-semibold">Awaiting Account History</strong>
+                            <span class="text-slate-500 text-[11px] leading-normal block mt-0.5">Disabling override matches this dealer against standard underwriting rules.</span>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            const items = [];
+
+            // 2MR analysis
+            if (m2r < 75) {
+                items.push({
+                    status: "danger",
+                    title: "Action Required: Elevate 2MR Rate",
+                    desc: `Boost 2-month customer retention from ${m2r}% to standard baseline (>=75%) to release safety lockout caps.`
+                });
+            } else {
+                items.push({
+                    status: "success",
+                    title: "Lockout Boundary Safe",
+                    desc: `Current 2MR of ${m2r}% successfully satisfies baseline policy benchmarks.`
+                });
+            }
+
+            // PSA volume triggers
+            if (psa < 60) {
+                items.push({
+                    status: "warning",
+                    title: "Required Volume Growth Target",
+                    desc: `Increase activations beyond 60 PSA to qualify for premium tier structures (Tiers 5, 7, and 9).`
+                });
+            } else {
+                let targetPsa = 100;
+                if (psa >= 100 && psa < 150) { targetPsa = 150; }
+                else if (psa >= 150 && psa < 200) { targetPsa = 200; }
+
+                if (psa < 200) {
+                    items.push({
+                        status: "info",
+                        title: `Required for Next Premium Level`,
+                        desc: `Achieve ${targetPsa} monthly activations to advance within your current tier limit.`
+                    });
+                } else {
+                    items.push({
+                        status: "success",
+                        title: "Maximum Volume Target Verified",
+                        desc: `Currently mapped to highest credit ceiling available under current guidelines.`
+                    });
+                }
+            }
+
+            // Retention optimization analysis
+            if (m4r < 60) {
+                items.push({
+                    status: "warning",
+                    title: "Required 4MR Growth",
+                    desc: `Target ${(60 - m4r).toFixed(0)}% growth to secure standard credit paths starting at Tier 4.`
+                });
+            } else if (m4r < 70) {
+                items.push({
+                    status: "info",
+                    title: "Opportunity: Advance to Tiers 6/7",
+                    desc: `Target ${(70 - m4r).toFixed(0)}% growth to unlock standard quality parameters.`
+                });
+            } else if (m4r < 75) {
+                items.push({
+                    status: "info",
+                    title: "Opportunity: Advance to Tiers 8/9",
+                    desc: `Target ${(75 - m4r).toFixed(0)}% growth to unlock premium underwriting credit structures.`
+                });
+            } else {
+                items.push({
+                    status: "success",
+                    title: "Optimal Retention Bracket Verified",
+                    desc: `Current 4MR of ${m4r}% qualifies this account for upper tier paths.`
+                });
+            }
+
+            // Render roadmaps with bespoke iconography
+            items.forEach(item => {
+                let iconEl = "";
+                let itemClass = "";
+
+                if (item.status === "success") {
+                    iconEl = `<div class="p-1 bg-slate-100 text-slate-800 rounded-md shrink-0"><i data-lucide="check" class="w-3.5 h-3.5"></i></div>`;
+                    itemClass = "border-slate-100 bg-slate-50/40";
+                } else if (item.status === "warning") {
+                    iconEl = `<div class="p-1 bg-slate-100 text-slate-700 rounded-md shrink-0"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i></div>`;
+                    itemClass = "border-slate-200/60 bg-white shadow-xs";
+                } else if (item.status === "danger") {
+                    iconEl = `<div class="p-1 bg-rose-50 text-rose-700 rounded-md shrink-0"><i data-lucide="alert-circle" class="w-3.5 h-3.5"></i></div>`;
+                    itemClass = "border-rose-100 bg-rose-50/25";
+                } else {
+                    iconEl = `<div class="p-1 bg-slate-100 text-slate-800 rounded-md shrink-0"><i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></div>`;
+                    itemClass = "border-slate-200/60 bg-white";
+                }
+
+                container.innerHTML += `
+                    <div class="flex items-start gap-3 p-3 rounded-lg border ${itemClass}">
+                        ${iconEl}
+                        <div>
+                            <strong class="text-slate-800 font-semibold block text-xs leading-none">${item.title}</strong>
+                            <p class="text-slate-500 text-[11px] mt-1.5 leading-normal">${item.desc}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            lucide.createIcons();
+        }
+
+        // Narrative Copy Handler with accurate store properties and direct performance statistics
+        function copySingleAssessmentText() {
+            const tspId = document.getElementById("store-tsp-id").value;
+            const storeDescName = document.getElementById("store-desc-name").value;
+            const address = document.getElementById("store-address").value;
+            const program = document.getElementById("store-program").options[document.getElementById("store-program").selectedIndex].text;
+            const m4r = document.getElementById("store-m4r-input").value;
+            const m3r = document.getElementById("store-m3r-input").value;
+            const m2r = document.getElementById("store-m2r-input").value;
+            const psa = document.getElementById("store-psa").value;
+            const isNewStore = document.getElementById("store-is-new").checked ? "Yes" : "No";
+            const tierName = document.getElementById("outcome-tier-name").innerText;
+            const current = document.getElementById("outcome-current-limit-val").innerText;
+            const recommended = document.getElementById("outcome-recommended-limit").innerText;
+            const change = document.getElementById("outcome-diff-value").innerText;
+            const reason = document.getElementById("outcome-tier-reason").innerText;
+
+            const narrative = `--- PARAMOUNT WIRELESS CREDIT REVIEW ---
+DEALER PROFILE:
+- TSP ID: ${tspId}
+- Dealer: ${storeDescName}
+- Physical Address: ${address}
+- Underwriting Policy Path: ${program}
+
+CURRENT REGISTERED RETENTION METRICS:
+- 4-Month Retention (4MR): ${m4r}%
+- 3-Month Retention (3MR): ${m3r}%
+- 2-Month Retention (2MR): ${m2r}%
+- Monthly PSA Volume: ${psa}
+- New Store Flag: ${isNewStore}
+
+UNDERWRITING RESOLUTION SUMMARY:
+- Matched Corporate Profile: ${tierName}
+- Strategic System Rationale: ${reason}
+- Currently Assigned Limit: ${current}
+- Recommended Limit Threshold: ${recommended}
+- Decision Margin: ${change}
+----------------------------------------`;
+
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = narrative;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+
+            showToast("Performance Narrative copied to clipboard successfully.", "success");
+        }
+
+        // Corporate Alert Handler
+        function showToast(message, type = "info") {
+            const container = document.getElementById("toast-container") || createToastContainer();
+            const toast = document.createElement("div");
+            
+            const bgClass = type === "success" ? "bg-slate-900 border-slate-800 text-white" : "bg-slate-900 border-slate-800 text-white";
+            const icon = type === "success" ? "check-circle" : "info";
+            
+            toast.className = `${bgClass} border px-4 py-3 rounded-xl shadow-lg flex items-center gap-2.5 text-xs font-semibold transition duration-300 transform translate-y-2 opacity-0 max-w-sm pointer-events-auto`;
+            toast.innerHTML = `<i class="w-4 h-4 text-slate-350 shrink-0" data-lucide="${icon}"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                toast.classList.remove("opacity-0", "translate-y-2");
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add("opacity-0", "translate-y-2");
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function createToastContainer() {
+            const div = document.createElement("div");
+            div.id = "toast-container";
+            div.className = "fixed bottom-5 right-5 flex flex-col gap-2.5 z-50 pointer-events-none";
+            document.body.appendChild(div);
+            return div;
+        }
+    </script>
+
+    <!-- BATCH LEDGER PARSING LOGIC -->
+    <script>
+        let batchResults = [];
+
+        function loadSampleBatchData() {
+            const rawSample = `Dallas Tech Outlet\t10000\tincrease\t82\t80\t91\t130\tfalse
+Orlando Cellular Pro\t6000\tdeduction\t45\t70\t68\t40\tfalse
+ARZ Enterprises LLC\t10000\tincrease\t82\t80\t91\t130\tfalse
+Jersey Shore Mobile\t12000\tbase\t90\t85\t94\t180\tfalse
+Midwest Cellular LLC\t8000\tincrease\t61\t65\t79\t85\tfalse
+Cascade Wireless Hub\t0\tbase\t55\t86\t88\t45\tfalse
+Phoenix Wireless\t5000\tincrease\t40\t60\t58\t30\tfalse
+Star Wireless\t5000\tbase\t0\t0\t0\t0\ttrue
+Substandard Corp\t8000\tdeduction\t35\t60\t65\t15\tfalse`;
+            
+            document.getElementById("batch-paste-box").value = rawSample;
+        }
+
+        function clearBatch() {
+            document.getElementById("batch-paste-box").value = "";
+            document.getElementById("batch-results-wrapper").classList.add("hidden");
+            document.getElementById("batch-stats-section").classList.add("hidden");
+            document.getElementById("batch-count-badge").innerText = "0";
+            batchResults = [];
+        }
+
+        function parseAndProcessBatch() {
+            const boxVal = document.getElementById("batch-paste-box").value.trim();
+            if (!boxVal) return;
+
+            const rows = boxVal.split("\n");
+            const parsedResults = [];
+            let totalIncrease = 0;
+            let countIncrease = 0;
+            let countHold = 0;
+            let countReduction = 0;
+
+            rows.forEach((row, idx) => {
+                if (row.toLowerCase().includes("tsp") || row.toLowerCase().includes("retention")) {
+                    return; // skip headers
+                }
+
+                let cols = [];
+                if (row.includes("\t")) {
+                    cols = row.split("\t");
+                } else {
+                    cols = row.split(",");
+                }
+
+                if (cols.length < 4) return; 
+
+                const name = cols[0] ? cols[0].trim() : `Dealer Row #${idx + 1}`;
+                const currentLimit = parseFloat(cols[1]) || 0;
+                
+                let programInput = cols[2] ? cols[2].trim().toLowerCase() : "base";
+                let program = "base";
+                if (programInput.includes("inc") || programInput.includes("perf")) program = "increase";
+                else if (programInput.includes("ded") || programInput.includes("penalty")) program = "deduction";
+
+                const m4r = parseFloat(cols[3]) || 0;
+                const m3r = parseFloat(cols[4]) || 0;
+                const m2r = parseFloat(cols[5]) || 0;
+                const psa = parseFloat(cols[6]) || 0;
+                const isNewStore = cols[7] ? cols[7].trim().toLowerCase() === "true" : false;
+
+                const result = evaluateStore({ m4r, m3r, m2r, psa, isNewStore, program });
+                const variance = result.limit - currentLimit;
+
+                if (variance > 0) {
+                    totalIncrease += variance;
+                    countIncrease++;
+                } else if (variance === 0) {
+                    countHold++;
+                } else {
+                    countReduction++;
+                }
+
+                parsedResults.push({
+                    name,
+                    m4r, m3r, m2r,
+                    psa,
+                    isNewStore,
+                    program,
+                    tier: result.tier,
+                    tierLabel: result.name,
+                    reason: result.reason,
+                    currentLimit,
+                    recommendedLimit: result.limit,
+                    variance
+                });
+            });
+
+            if (parsedResults.length === 0) return;
+
+            batchResults = parsedResults;
+
+            const tbody = document.getElementById("batch-results-tbody");
+            tbody.innerHTML = "";
+
+            parsedResults.forEach(item => {
+                let badgeClass = "";
+                let varClass = "";
+                let varText = "";
+
+                if (item.variance > 0) {
+                    varClass = "text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded";
+                    varText = `+$${item.variance.toLocaleString()}`;
+                } else if (item.variance === 0) {
+                    varClass = "text-slate-500 font-medium";
+                    varText = "$0";
+                } else {
+                    varClass = "text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded";
+                    varText = `-$${Math.abs(item.variance).toLocaleString()}`;
+                }
+
+                if (item.tier >= 8) badgeClass = "bg-emerald-50 text-emerald-800 border border-emerald-200";
+                else if (item.tier >= 5) badgeClass = "bg-slate-100 text-slate-800 border border-slate-200";
+                else if (item.tier >= 2) badgeClass = "bg-amber-50 text-amber-800 border border-amber-200";
+                else badgeClass = "bg-rose-50 text-rose-800 border border-rose-200";
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50/50 transition">
+                        <td class="px-4 py-3.5 font-bold text-slate-800">${item.name}</td>
+                        <td class="px-4 py-3.5 font-mono text-slate-500">${item.m4r}% / ${item.m3r}% / ${item.m2r}%</td>
+                        <td class="px-4 py-3.5 text-slate-600">${item.psa} PSA</td>
+                        <td class="px-4 py-3.5">
+                            <span class="px-2 py-0.5 text-[9px] font-bold rounded ${badgeClass}">Tier ${item.tier}</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-slate-500">$${item.currentLimit.toLocaleString()}</td>
+                        <td class="px-4 py-3.5 font-bold text-slate-900">$${item.recommendedLimit.toLocaleString()}</td>
+                        <td class="px-4 py-3.5"><span class="${varClass}">${varText}</span></td>
+                        <td class="px-4 py-3.5 text-right text-slate-500 font-medium max-w-xs truncate">${item.reason}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById("batch-count-badge").innerText = parsedResults.length;
+            document.getElementById("stat-processed-count").innerText = parsedResults.length;
+            document.getElementById("stat-approved-sum").innerText = `+$${totalIncrease.toLocaleString()}`;
+
+            const totalActions = countIncrease + countHold + countReduction;
+            if (totalActions > 0) {
+                const pctInc = ((countIncrease / totalActions) * 100).toFixed(0);
+                document.getElementById("stat-pct-increase").innerText = `${pctInc}% Increase`;
+                document.getElementById("bar-pct-increase").style.width = `${pctInc}%`;
+                document.getElementById("bar-pct-hold").style.width = `${((countHold / totalActions) * 100).toFixed(0)}%`;
+                document.getElementById("bar-pct-reduction").style.width = `${((countReduction / totalActions) * 100).toFixed(0)}%`;
+            }
+
+            document.getElementById("batch-results-wrapper").classList.remove("hidden");
+            document.getElementById("batch-stats-section").classList.remove("hidden");
+            lucide.createIcons();
+        }
+
+        function exportBatchCSV() {
+            if (batchResults.length === 0) return;
+
+            let csvContent = "Dealer,4MR,3MR,2MR,PSA,IsNewStore,Program,Matched Tier,Reason,Current Limit,Recommended Limit,Variance\n";
+            batchResults.forEach(item => {
+                const escapedReason = item.reason.replace(/"/g, '""');
+                csvContent += `"${item.name}",${item.m4r},${item.m3r},${item.m2r},${item.psa},${item.isNewStore},${item.program},${item.tier},"${escapedReason}",${item.currentLimit},${item.recommendedLimit},${item.variance}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", "paramount_credit_decisions.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+
+    <!-- MATRICES VIEWER INJECTOR -->
+    <script>
+        function switchMatrixView(viewId) {
+            document.querySelectorAll(".ref-btn").forEach(btn => {
+                btn.className = "ref-btn px-3 py-1.5 rounded-md text-xs font-semibold text-slate-550 hover:text-slate-800 transition";
+            });
+
+            const activeBtn = document.getElementById(`btn-${viewId}`);
+            if (activeBtn) {
+                activeBtn.className = "ref-btn active px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-800 shadow-xs transition";
+            }
+
+            const tbody = document.getElementById("matrix-view-tbody");
+            tbody.innerHTML = "";
+
+            let activeProgram = "base";
+            if (viewId === "ref-increase") activeProgram = "increase";
+            if (viewId === "ref-deduction") activeProgram = "deduction";
+
+            const limits = TIERS_LIMITS[activeProgram];
+
+            const rowsMeta = [
+                { tier: 9, range: "4MR >= 75% / PSA >= 60" },
+                { tier: 8, range: "4MR >= 75% / PSA < 60" },
+                { tier: 7, range: "70% <= 4MR < 75% / PSA >= 60" },
+                { tier: 6, range: "70% <= 4MR < 75% / PSA < 60" },
+                { tier: 5, range: "60% <= 4MR < 65% / PSA >= 60" },
+                { tier: 4, range: "60% <= 4MR < 65% / PSA < 60" },
+                { tier: 3, range: "4MR < 50% / 2MR > 85% / 3MR > 75%" },
+                { tier: 2, range: "4MR < 50% / 2MR < 85% / 3MR < 75%" },
+                { tier: 1, range: "New Store Exceptions Override" },
+                { tier: 0, range: "Under 75% 2MR Safety Fallback Check" }
+            ];
+
+            rowsMeta.forEach(meta => {
+                const limitData = limits[meta.tier];
+                let rowBgClass = "";
+                let labelStyle = "bg-slate-100 text-slate-800";
+
+                if (meta.tier >= 8) {
+                    rowBgClass = "bg-emerald-50/10";
+                    labelStyle = "bg-emerald-50 text-emerald-800 border border-emerald-200";
+                } else if (meta.tier === 0) {
+                    rowBgClass = "bg-rose-50/10";
+                    labelStyle = "bg-rose-50 text-rose-800 border border-rose-250";
+                } else {
+                    labelStyle = "bg-slate-100 text-slate-700 border border-slate-200";
+                }
+
+                tbody.innerHTML += `
+                    <tr class="${rowBgClass} hover:bg-slate-50 transition">
+                        <td class="px-4 py-3 font-bold">
+                            <span class="px-2 py-0.5 rounded text-[10px] ${labelStyle}">Tier ${meta.tier}</span>
+                        </td>
+                        <td class="px-4 py-3 font-bold text-slate-800 font-mono text-xs">${meta.range}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-550">$${limitData.base.toLocaleString()}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-700">$${limitData.psa100.toLocaleString()}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-700">$${limitData.psa150.toLocaleString()}</td>
+                        <td class="px-4 py-3 font-bold text-slate-900">$${limitData.psa200.toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+        }
+    </script>
+
+    <!-- MAIN SYSTEM NAVIGATION & LAUNCHER -->
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll(".tab-pane").forEach(pane => {
+                pane.classList.add("hidden");
+            });
+
+            document.querySelectorAll(".tab-btn").forEach(btn => {
+                btn.className = "tab-btn flex-1 py-1.5 rounded-md text-xs font-semibold text-center text-slate-500 hover:text-slate-800 transition duration-150";
+            });
+
+            document.getElementById(tabId).classList.remove("hidden");
+
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.className = "tab-btn active flex-1 py-1.5 rounded-md text-xs font-bold text-center bg-white text-slate-900 shadow-xs transition duration-150";
+            }
+
+            if (tabId === "matrix-tab") {
+                switchMatrixView("ref-base");
+            }
+        }
+
+        // Window entry handler
+        window.onload = function() {
+            lucide.createIcons();
+            initPreloadedSelect();
+            runSingleEvaluation();
+        }
+    </script>
+
+    <!-- Minimalist Sourcing Footer -->
+    <footer class="bg-white border-t border-slate-200 text-slate-500 py-4 mt-6 text-center text-xs font-semibold">
+        <div class="max-w-4xl mx-auto px-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <span class="flex items-center gap-1.5 text-slate-400">
+                <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-slate-400"></i>
+                Paramount Wireless Underwriting Operations • Corporate Audit Board
+            </span>
+            <div class="flex flex-wrap items-center justify-center gap-3 font-mono text-[9px] text-slate-450">
+                <span>Database File: <strong class="text-slate-650 font-bold">TSP ID.xlsx</strong></span>
+                <span>Rule Matrix: <strong class="text-slate-650 font-bold">Marketplace_Limit_v6.pdf</strong></span>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
